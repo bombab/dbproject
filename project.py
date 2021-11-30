@@ -80,9 +80,17 @@ def Op1_MemberRegister() :
                 StartDate = input("시작일 8글자 ex) 20100101 :")
                 if len(StartDate) == 8: break
                 print("[입력오류]: 시작일 등록을 위해서는 년월일 8글자를 입력해주셔야 합니다.")
-            if int(PaymentDate) <= int(StartDate) : break
-            print("[입력오류]: 시작일이 결제일보다 이를수는 없습니다. 다시 입력해주세요.\n")
-        
+            while(True) :
+                if int(PaymentDate) <= int(StartDate) : break
+                print("[입력오류]: 시작일이 결제일보다 이를수는 없습니다. 다시 입력해주세요.\n")
+            try:
+                datetime.datetime(int(PaymentDate[0:4]),int(PaymentDate[4:6]),int(PaymentDate[6:8]))
+                datetime.datetime(int(StartDate[0:4]),int(StartDate[4:6]),int(StartDate[6:8]))
+                break
+            except ValueError: 
+                print("결제 날짜 혹은 시작일 날짜를 잘못 입력하였습니다. 다시 입력해주세요")
+                continue
+            
         TransPD = PaymentDate[0:4] +"-" + PaymentDate[4:6] + "-" + PaymentDate[6:8]
         TransSD = StartDate[0:4] + "-" + StartDate[4:6] + "-" + StartDate[6:8] 
         
