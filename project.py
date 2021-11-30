@@ -25,7 +25,7 @@ def ConnectMySQL() :
 
 
 
-# 메뉴 1번 회원가입
+# 메뉴 1번. 회원가입 및 신규 좌석 대여 등록
 
 def Op1_MemberRegister() : 
     conn, cursor = ConnectMySQL()
@@ -41,12 +41,12 @@ def Op1_MemberRegister() :
 나중에 다시 방문해주시기 바랍니다. 감사합니다.\n\n
 ''')
         
-    elif IsThereAnyEmptySeat == True : # 빈 좌석이 있을 경우 회원 등록
+    else : # 빈 좌석이 있을 경우 회원 등록
         print("현재 잔여 좌석이 "+str(len(RemainedSeat))+"개 남아 있습니다. 회원 등록을 진행합니다.")
         while(True) :
-            PhoneNumber = int(input("신규가입자 휴대폰 번호 : "))
+            PhoneNumber = int(input("신규가입자 휴대폰 번호 뒤 8자리 : "))
             if len(str(PhoneNumber)) == 8 : break
-            print("[입력오류]: 등록을 위해서는 휴대폰 번호 8자리를 입력해주셔야합니다.")
+            print("[입력오류]: 등록을 위해서는 휴대폰 번호 뒤 8자리를 입력해주셔야합니다.")
             
         Name = input("신규가입자 이름 : ")
         Address = input("신규가입자 주소 : ")
@@ -98,6 +98,7 @@ def Op1_MemberRegister() :
         EndDate = datetime.datetime(int(StartDate[0:4]),int(StartDate[4:6]),int(StartDate[6:8])) + datetime.timedelta(days = 30)
         TransED = str(EndDate.year) + "-" + str(EndDate.month) + "-" + str(EndDate.day)
         
+        # MySQL에 반영
         print("\n회원을 등록합니다.")
         INSERTMemberCommand = "INSERT INTO MEMBER(M_PHONE, M_NAME, M_ADDRESS, M_REST,S_NUMBER,R_NUMBER) VALUES (%s, %s, %s, %s, %s, %s)" 
         UPDATESeatCommand = "UPDATE SEAT SET S_START = %s, S_END = %s, S_PAYMENT = %s WHERE S_NUMBER = (SELECT S_NUMBER FROM MEMBER WHERE M_PHONE = %s)"
@@ -108,9 +109,49 @@ def Op1_MemberRegister() :
                 conn.commit()
             
 
+
+# 메뉴 2번. 입실 등록
+
+def Op2_EnterRegister() :
+    conn, cursor = ConnectMySQL()
+    
+    print('''====================================================
+입실 등록절차를 시작합니다.
+휴대폰 번호를 입력해주세요
+====================================================''')
+    PhoneNumber = int(input("휴대폰 번호 뒤 8자리 : "))
+    cursor.execute('USE StudyMember;')
+    
+    SearchPNumCommand = "SELECT * FROM Member WHERE M_PHONE = %s"
+    
+    with conn.cursor() as cur:
+        cur.execute(SearchPNumCommand,PhoneNumber)
+        SelectNum = cur.fetchall()
+        IsThereAnyNum = bool(SelectNum)
+        
+        if IsThereAnyNum == False:
+            print('''회원 등록이 되어있지 않습니다.
+입실하려면 먼저 회원등록을 하셔야합니다.''')
+        else:
+            EnterRegisterCommand = "UPDATE DOOR SET D_ENTER = SYSDATE() WHERE D_NUMBER = (SELECT S_NUMBER FROM MEMBER WHERE M_PHONE = %s)"
+            cur.execute(EnterRegisterCommand,PhoneNumber)
+            conn.commit()
+            print("\n입실 등록이 완료되었습니다.\n")
+
+
+
+# 메뉴 3번. 스터디룸 이용 등록
+ 
+def Op3_StudyRoomRegister() :
+    pass
+
+
+
 ##INSERT INTO SEAT VALUES(6,'작은방',150000,'2021-11-11','2021-12-10','2021-11-11');
 ##INSERT INTO MEMBER VALUES (87651346,'이름','주소',20,좌석번호,NULL);
 
+
+# 메뉴 7번. 메뉴 종료
 
 def Op7_ExitMenu() :
     print("\n메뉴를 나갑니다.\n") 
@@ -143,12 +184,16 @@ StudyMember 독서실에 오신 것을 환영합니다.
     
     if SelectedButtion == 1:
         
-        Op1_MemberRegister() #등록절차 수행
+        Op1_MemberRegister() # 등록절차 수행
         
     elif SelectedButtion == 2:
-        pass 
+        
+        Op2_EnterRegister() # 입실절차 수행
+         
     elif SelectedButtion == 3:
-        pass
+        
+        Op3_StudyRoomRegister() # 스터디룸 이용 등록 절차 수행
+        
     elif SelectedButtion == 4:
         pass 
     elif SelectedButtion == 5:
@@ -157,7 +202,7 @@ StudyMember 독서실에 오신 것을 환영합니다.
         pass
     elif SelectedButtion == 7:
         
-        Op7_ExitMenu()
+        Op7_ExitMenu() # 메뉴 종료 절차 수행
               
     else :
         print('''\n****************************************************
@@ -167,7 +212,7 @@ StudyMember 독서실에 오신 것을 환영합니다.
     
     
 
-
+# while(True):
 MenuList()
 
 
