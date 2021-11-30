@@ -88,7 +88,7 @@ def Op1_MemberRegister() :
                 datetime.datetime(int(StartDate[0:4]),int(StartDate[4:6]),int(StartDate[6:8]))
                 break
             except ValueError: 
-                print("결제 날짜 혹은 시작일 날짜를 잘못 입력하였습니다. 다시 입력해주세요")
+                print("\n[입력오류]: 결제 날짜 혹은 시작일 날짜를 잘못 입력하였습니다. 다시 입력해주세요.\n")
                 continue
             
         TransPD = PaymentDate[0:4] +"-" + PaymentDate[4:6] + "-" + PaymentDate[6:8]
@@ -117,7 +117,7 @@ def Op2_EnterRegister() :
     
     print('''====================================================
 입실 등록절차를 시작합니다.
-휴대폰 번호를 입력해주세요
+휴대폰 번호를 입력해주세요.
 ====================================================''')
     PhoneNumber = int(input("휴대폰 번호 뒤 8자리 : "))
     cursor.execute('USE StudyMember;')
@@ -143,8 +143,53 @@ def Op2_EnterRegister() :
 # 메뉴 3번. 스터디룸 이용 등록
  
 def Op3_StudyRoomRegister() :
-    pass
-
+    conn, cursor = ConnectMySQL()
+    
+    cursor.execute('USE StudyMember;')
+    
+    SearchRestRoomCommand = "SELECT * FROM ROOM WHERE RES_START IS NULL"
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
+        cur.execute(SearchRestRoomCommand)
+        RestRoom = cur.fetchall()
+        
+        # 스터디룸 잔여 여부 현황 파악
+        IsThereAnyRestRoom = bool(RestRoom)
+        
+        if IsThereAnyRestRoom == False :
+            print("\n현재 모든 스터디룸이 사용중입니다. 나중에 다시 이용해주시기 바랍니다.")
+        else :
+            print('''====================================================
+스터디룸 이용 등록절차를 시작합니다.
+====================================================\n''')
+            print("현재 이용가능한 스터디룸 목록입니다.\n")
+            while(True) :
+                for i in RestRoom:
+                    print(str(i["R_NUMBER"])+"번 스터디룸, 스터디룸 최대 인원 : " + str(i["R_MAX"] ))
+                print("\n")
+            
+            # 이용할 스터디룸 입력
+                
+                SelectRoomNum = int(input("신규 이용 등록할 스터디룸 번호 : "))
+                if SelectRoomNum in [i["R_NUMBER"] for i in RestRoom] : break
+                print("\n[입력오류]: 잘못 누르셨습니다. 메뉴에 있는 스터디룸 번호만을 선택해주세요.\n")
+            
+            # 선택한 스터디룸을 이용할 인원수 입력
+            
+            while(True) :
+                PeopleNum = int(input('''총 몇 명이 이용하실 지 선택해주세요.\n
+(※ 참고 : 인원 수는 스터디룸 최대 인원 수를 넘으면 안되며 최소 2명 이상이어야 합니다.)\n
+이용인원 수 : '''))
+                if PeopleNum <= 1 or PeopleNum > RestRoom[SelectRoomNum-1]["R_MAX"] :
+                    print('''\n해당 스터디룸을 이용하기엔 적절하지 않은 이용 수 입니다.
+다시 입력하고 싶으시면 아무키를 누르시고, 처음 메뉴로 돌아가고 싶으시면 1번을 눌러주세요.\n''')
+                    SelectButton = int(input("번호 입력: "))
+                    if SelectButton == 1 :
+                        conn.commit()
+                        return
+                    else : continue
+                    
+                    
+        conn.commit()
 
 
 ##INSERT INTO SEAT VALUES(6,'작은방',150000,'2021-11-11','2021-12-10','2021-11-11');
@@ -212,8 +257,8 @@ StudyMember 독서실에 오신 것을 환영합니다.
     
     
 
-# while(True):
-MenuList()
+while(True):
+    MenuList()
 
 
 
