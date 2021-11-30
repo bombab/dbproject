@@ -24,6 +24,22 @@ def ConnectMySQL() :
     return (conn,cursor)
 
 
+# 휴대폰 번호 조회
+
+def SearchPhoneNumber() :
+    conn, cursor = ConnectMySQL()
+    PhoneNumber = int(input("휴대폰 번호 뒤 8자리 : "))
+    cursor.execute('USE StudyMember;')
+    
+    SearchPNumCommand = "SELECT * FROM Member WHERE M_PHONE = %s"
+    
+    with conn.cursor() as cur:
+        cur.execute(SearchPNumCommand,PhoneNumber)
+        SelectNum = cur.fetchall()
+        IsThereAnyNum = bool(SelectNum)
+        conn.commit()
+        
+    return (IsThereAnyNum, PhoneNumber)
 
 # 메뉴 1번. 회원가입 및 신규 좌석 대여 등록
 
@@ -119,24 +135,18 @@ def Op2_EnterRegister() :
 입실 등록절차를 시작합니다.
 휴대폰 번호를 입력해주세요.
 ====================================================''')
-    PhoneNumber = int(input("휴대폰 번호 뒤 8자리 : "))
-    cursor.execute('USE StudyMember;')
-    
-    SearchPNumCommand = "SELECT * FROM Member WHERE M_PHONE = %s"
-    
-    with conn.cursor() as cur:
-        cur.execute(SearchPNumCommand,PhoneNumber)
-        SelectNum = cur.fetchall()
-        IsThereAnyNum = bool(SelectNum)
+
+    IsThereAnyNum, PhoneNumber = SearchPhoneNumber()
         
-        if IsThereAnyNum == False:
-            print('''회원 등록이 되어있지 않습니다.
+    if IsThereAnyNum == False:
+        print('''회원 등록이 되어있지 않습니다.
 입실하려면 먼저 회원등록을 하셔야합니다.''')
-        else:
+    else:
+        with conn.cursor() as cur:
             EnterRegisterCommand = "UPDATE DOOR SET D_ENTER = SYSDATE() WHERE D_NUMBER = (SELECT S_NUMBER FROM MEMBER WHERE M_PHONE = %s)"
             cur.execute(EnterRegisterCommand,PhoneNumber)
             conn.commit()
-            print("\n입실 등록이 완료되었습니다.\n")
+        print("\n입실 등록이 완료되었습니다.\n")
 
 
 
@@ -182,13 +192,29 @@ def Op3_StudyRoomRegister() :
                 if PeopleNum <= 1 or PeopleNum > RestRoom[SelectRoomNum-1]["R_MAX"] :
                     print('''\n해당 스터디룸을 이용하기엔 적절하지 않은 이용 수 입니다.
 다시 입력하고 싶으시면 아무키를 누르시고, 처음 메뉴로 돌아가고 싶으시면 1번을 눌러주세요.\n''')
-                    SelectButton = int(input("번호 입력: "))
+                    SelectButton = int(input("입력: "))
                     if SelectButton == 1 :
                         conn.commit()
                         return
                     else : continue
-                    
-                    
+                else : break
+            # 사람 명 수 만큼 휴대폰 번호 입력 
+            for i in range(PeopleNum) : 
+                while(True):
+                    print("휴대폰 번호 뒤 8자리를 입력해주세요.")
+                    IsThereAnyNum, PhoneNumber = SearchPhoneNumber()
+                    if IsThereAnyNum == False:
+                        print('''해당 휴대폰 번호는 회원 명단에 없습니다.
+다시 입력하고 싶으시면 아무키를 누르시고, 메뉴로 돌아가 회원가입을 원하시면 1번을 눌러주세요.\n''')      
+                        SelectButton = int(input("입력: "))
+                        if SelectButton == 1 :
+                            conn.commit()
+                            return
+                        else : continue
+                    else : break
+                RegisterRoomCommand = "UPDATE MEMBER SET MEMBER.R_NUMBER = %d WHERE M_PHONE = %d"
+                cur.execute(RegisterRoomCommand,(SelectRoomNum,PhoneNumber))
+            
         conn.commit()
 
 
