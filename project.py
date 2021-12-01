@@ -135,10 +135,9 @@ def Op1_MemberRegister() :
             
 
 
+
+
 # 메뉴 2번. 입실 등록
-
-
- 
 
 def Op2_EnterRegister() :
     conn, cursor = ConnectMySQL()
@@ -162,6 +161,9 @@ def Op2_EnterRegister() :
             cur.execute(EnterRegisterCommand,PhoneNumber)
             conn.commit()
         print("\n입실 등록이 완료되었습니다.\n")
+
+
+
 
 
 
@@ -285,9 +287,76 @@ def Op3_StudyRoomRegister() :
 스터디룸 등록이 완료되었습니다.
 ===============================\n''')
             
-        
 
 
+
+# 메뉴 4번. 기존 이용 회원의 좌석변경
+
+def Op4_ChangeSeatNum() :
+    conn, cursor = ConnectMySQL()
+    cursor.execute('USE StudyMember;')
+    
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
+        print('''====================================================
+좌석 변경가능 여부를 확인하기 위해
+휴대폰 번호를 입력해주세요.
+====================================================''')
+        IsThereAnyNum, PhoneNumber = SearchPhoneNumber()
+        if IsThereAnyNum == False :
+            print('''잘못 입력하셨거나 회원 등록이 되어있지 않습니다.
+ 메뉴로 돌아갑니다.\n''')
+        else :
+            SearchSeatCommand = '''SELECT * FROM seat WHERE S_Start IS NULL and S_TYPE = 
+                                (SELECT seat.S_TYPE FROM seat, member 
+                                WHERE seat.s_number = member.s_number and member.m_phone = %s) 
+                                ORDER BY S_Number'''
+            cur.execute(SearchSeatCommand,PhoneNumber)
+            RemainedSeat = cur.fetchall()
+            IsThereAnySeat = bool(RemainedSeat)
+            
+            if IsThereAnySeat == False :
+                
+                print("\n죄송합니다. 현재 잔여 좌석이 없어 좌석변경이 불가능합니다.\n")
+            else :
+                print('''\n==========================
+좌석 변경을 시작합니다.
+==========================\n''')
+                print("현재 변경가능한 좌석 목록입니다.\n")
+                for i in RemainedSeat :
+                    print("좌석번호 : " + str(i["S_NUMBER"])+ "번 좌석")
+                print("\n 원하시는 좌석을 선택해주세요.\n")
+                while True :
+                    SelectSeatNum = input("좌석 번호 : ")
+                    if SelectSeatNum in [str(i["S_NUMBER"]) for i in RemainedSeat] : break
+                    print("목록에 나와있는 좌석만 선택해주세요.\n") 
+                
+                MySeatDataCommand = '''SELECT * FROM SEAT WHERE S_NUMBER =
+							        (SELECT S_NUMBER
+                                    FROM MEMBER
+                                    WHERE M_PHONE = %s)'''
+                
+                cur.execute(MySeatDataCommand,PhoneNumber)
+                SeatData = cur.fetchall()
+                
+                
+                UpDateSeatCommand = ''' UPDATE SEAT
+                                        SET S_START = %s , S_END = %s , S_PAYMENT = %s
+                                        WHERE S_NUMBER = 
+                                                    (SELECT S_NUMBER
+	                                                FROM   MEMBER
+		                                            WHERE  M_PHONE = %s)'''
+                
+                ChangeSeatCommand = "UPDATE MEMBER SET MEMBER.S_NUMBER = %s WHERE M_PHONE = %s"
+                
+                
+                cur.execute(UpDateSeatCommand,(None,None,None,PhoneNumber))
+                cur.execute(ChangeSeatCommand,(int(SelectSeatNum),PhoneNumber))
+                cur.execute(UpDateSeatCommand,(SeatData[0]["S_START"],SeatData[0]["S_END"],SeatData[0]["S_PAYMENT"],PhoneNumber))
+                conn.commit()
+                print('''============================
+좌석변경이 완료되었습니다.
+============================\n''')
+                    
 ##INSERT INTO SEAT VALUES(6,'작은방',150000,'2021-11-11','2021-12-10','2021-11-11');
 ##INSERT INTO MEMBER VALUES (87651346,'이름','주소',20,좌석번호,NULL);
 
@@ -336,7 +405,9 @@ StudyMember 독서실에 오신 것을 환영합니다.
         Op3_StudyRoomRegister() # 스터디룸 이용 등록 절차 수행
         
     elif SelectedButtion == 4:
-        pass 
+        
+        Op4_ChangeSeatNum() # 좌석 변경 수행
+         
     elif SelectedButtion == 5:
         pass 
     elif SelectedButtion == 6:
