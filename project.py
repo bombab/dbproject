@@ -172,6 +172,7 @@ def Op3_StudyRoomRegister() :
 스터디룸 이용 등록절차를 시작합니다.
 ====================================================\n''')
             print("현재 이용가능한 스터디룸 목록입니다.\n")
+            
             while(True) :
                 for i in RestRoom:
                     print(str(i["R_NUMBER"])+"번 스터디룸, 스터디룸 최대 인원 : " + str(i["R_MAX"] ))
@@ -213,28 +214,57 @@ def Op3_StudyRoomRegister() :
                             return
                         else : continue
                     else : break
-                RegisterRoomCommand = "UPDATE MEMBER SET MEMBER.R_NUMBER = %d WHERE M_PHONE = %d"
+                RegisterRoomCommand = "UPDATE MEMBER SET MEMBER.R_NUMBER = %s WHERE M_PHONE = %s"
                 cur.execute(RegisterRoomCommand,(SelectRoomNum,PhoneNumber))
+                conn.commit()
             
-            # 이용 시간 입력, 시작시간은 정각이어야 하며 시간 단위로 입력해야한다.
-            while (True) :
-                while(True) :
-                    StartYear,Month,Day,Hour =  input("이용시작 시간 년/월/일/시간 콤마 단위로 10글자 ex) 2010,01,01,17 : ").spilt(',')
-                    if len(RoomStartTime) == 10: break
-                    print("[입력오류]: 결제일 등록을 위해서는 년/월/일/시간 10글자를 입력해주셔야 합니다.")
-                
-                while(True) :
-                    if int(PaymentDate) <= int(StartDate) : break
-                    print("[입력오류]: 시작일이 결제일보다 이를수는 없습니다. 다시 입력해주세요.\n")
+            
+               
+                # 시작 시간 입력, 시작시간은 정각이어야 하며 시간 단위로 입력해야한다.
+            while(True) :
+                print('''이용 시작 시각을 입력합니다.
+년/월/일/시간을 콤마 단위로 10글자 입력해주세요. ex) 2015년 10월 24일 05시 => 2015,10,24,05''')
+                StartYear, StartMonth, StartDay, StartHour =  input("이용시작 시각 입력 : ").split(',')
                 try:
-                    datetime.datetime(int(PaymentDate[0:4]),int(PaymentDate[4:6]),int(PaymentDate[6:8]))
-                    datetime.datetime(int(StartDate[0:4]),int(StartDate[4:6]),int(StartDate[6:8]))
+                    datetime.datetime(int(StartYear),int(StartMonth),int(StartDay),int(StartHour))
                     break
-                except ValueError: 
-                    print("\n[입력오류]: 결제 날짜 혹은 시작일 날짜를 잘못 입력하였습니다. 다시 입력해주세요.\n")
-                    continue 
+                except ValueError:
+                    print("\n[입력오류]: 시작 시간을 잘못 입력하였습니다. 다시 입력해주세요.\n")
+                    continue
+              
+                # 이용 시간 입력, 이용 시간은 시간 단위이며, 이용자 모두 남은 잔여시간이 이용시간 보다 같거나 커야 한다.
+            while(True) :
+                print("이용 시간을 입력합니다. 시간 단위로 입력가능합니다.")      
+                TimeOfUse = int(input("이용 시간 입력 : "))
+                RestTimeList = []
+                SelectRestTimeCommand = "SELECT M_REST FROM MEMBER, ROOM WHERE MEMBER.R_NUMBER = ROOM.R_NUMBER"
+                cur.execute(SelectRestTimeCommand)
+                Resttime = cur.fetchall()
+                for i in range(PeopleNum) : 
+                    RestTimeList.append(Resttime[i]["M_REST"])
+                    RestTimeList[i] = RestTimeList[i] - TimeOfUse
+                if min(RestTimeList) < 0: 
+                    print("회원 중 이용시간에 비해 잔여시간이 부족한 회원이 있습니다. 다시 입력해주세요.\n")
+                else : break
             
-            RegisterTimeCommand = ""
+            # 해당 회원들의 시작시간, 종료시간 파악
+            StartTime = datetime.datetime(int(StartYear),int(StartMonth),int(StartDay),int(StartHour))
+            EndTime = StartTime + datetime.timedelta(hours = TimeOfUse)
+
+            # 시작시간, 종료시간 문자열로 변형
+            
+            TransST = str(StartTime.year) + "-" + str(StartTime.month) + "-" + str(StartTime.day) + " " + str(StartTime.hour) + ":00:00" 
+            TransET = str(EndTime.year) + "-" + str(EndTime.month) + "-" + str(EndTime.day) + " " + str(EndTime.hour) + ":00:00"
+            
+            # 시간 등록 명령 실행
+            RegisterTimeCommand = "UPDATE ROOM SET   R_START = %s, R_END = %s , R_TIME = %s WHERE R_NUMBER = %s"
+            cur.execute(RegisterTimeCommand,(TransST,TransET,TimeOfUse,SelectRoomNum))
+            conn.commit()
+            
+            #이용자들의 잔여시간 차감 명령 실행
+            SubRestTimeCommand = "UPDATE MEMBER SET M_REST = M_REST - %s WHERE R_NUMBER = %s"
+            cur.execute(SubRestTimeCommand,(TimeOfUse,SelectRoomNum))
+            conn.commit()
             
             
         conn.commit()
