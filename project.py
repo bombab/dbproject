@@ -41,6 +41,16 @@ def SearchPhoneNumber() :
         
     return (IsThereAnyNum, PhoneNumber)
 
+
+# 스케쥴링 회원 삭제 함수
+
+# 스케쥴링 스터디룸 비우기 함수
+
+
+
+
+
+
 # 메뉴 1번. 회원가입 및 신규 좌석 대여 등록
 
 def Op1_MemberRegister() : 
@@ -179,6 +189,7 @@ def Op3_StudyRoomRegister() :
             print("현재 이용가능한 스터디룸 목록입니다.\n")
             
             while(True) :
+                ForOutWhile = 0
                 for i in RestRoom:
                     print(str(i["R_NUMBER"])+"번 스터디룸, 스터디룸 최대 인원 : " + str(i["R_MAX"] ))
                 print("\n")
@@ -186,7 +197,12 @@ def Op3_StudyRoomRegister() :
             # 이용할 스터디룸 입력
                 
                 SelectRoomNum = int(input("신규 이용 등록할 스터디룸 번호 : "))
-                if SelectRoomNum in [i["R_NUMBER"] for i in RestRoom] : break
+                for i in RestRoom:
+                    if i["R_NUMBER"] == SelectRoomNum :
+                        SelectedRoom = i
+                        ForOutWhile = 1
+                    break
+                if ForOutWhile == 1 : break 
                 print("\n[입력오류]: 잘못 누르셨습니다. 메뉴에 있는 스터디룸 번호만을 선택해주세요.\n")
             
             # 선택한 스터디룸을 이용할 인원수 입력
@@ -195,11 +211,11 @@ def Op3_StudyRoomRegister() :
                 PeopleNum = int(input('''총 몇 명이 이용하실 지 선택해주세요.\n
 (※ 참고 : 인원 수는 스터디룸 최대 인원 수를 넘으면 안되며 최소 2명 이상이어야 합니다.)\n
 이용인원 수 : '''))
-                if PeopleNum <= 1 or PeopleNum > RestRoom[SelectRoomNum-1]["R_MAX"] :
+                if PeopleNum <= 1 or PeopleNum > SelectedRoom["R_MAX"] :
                     print('''\n해당 스터디룸을 이용하기엔 적절하지 않은 이용 수 입니다.
 다시 입력하고 싶으시면 아무키를 누르시고, 처음 메뉴로 돌아가고 싶으시면 1번을 눌러주세요.\n''')
-                    SelectButton = int(input("입력: "))
-                    if SelectButton == 1 :
+                    SelectButton = input("입력: ")
+                    if SelectButton == '1' :
                         conn.commit()
                         return
                     else : continue
@@ -213,8 +229,8 @@ def Op3_StudyRoomRegister() :
                     if IsThereAnyNum == False:
                         print('''해당 휴대폰 번호는 회원 명단에 없습니다.
 다시 입력하고 싶으시면 아무키를 누르시고, 메뉴로 돌아가 회원가입을 원하시면 1번을 눌러주세요.\n''')      
-                        SelectButton = int(input("입력: "))
-                        if SelectButton == 1 :
+                        SelectButton = input("입력: ")
+                        if SelectButton == '1' :
                             conn.commit()
                             return
                         else : continue
@@ -257,7 +273,7 @@ def Op3_StudyRoomRegister() :
             TransET = EndTime.strftime('%Y-%m-%d %H:%M:%S')
             
             # 시간 등록 명령 실행
-            RegisterTimeCommand = "UPDATE ROOM SET   R_START = %s, R_END = %s , R_TIME = %s WHERE R_NUMBER = %s"
+            RegisterTimeCommand = "UPDATE ROOM SET RES_START = %s, RES_END = %s , RES_TIME = %s WHERE R_NUMBER = %s"
             cur.execute(RegisterTimeCommand,(TransST,TransET,TimeOfUse,SelectRoomNum))
             conn.commit()
             
@@ -265,9 +281,11 @@ def Op3_StudyRoomRegister() :
             SubRestTimeCommand = "UPDATE MEMBER SET M_REST = M_REST - %s WHERE R_NUMBER = %s"
             cur.execute(SubRestTimeCommand,(TimeOfUse,SelectRoomNum))
             conn.commit()
+            print('''\n===============================
+스터디룸 등록이 완료되었습니다.
+===============================\n''')
             
-            
-        conn.commit()
+        
 
 
 ##INSERT INTO SEAT VALUES(6,'작은방',150000,'2021-11-11','2021-12-10','2021-11-11');
@@ -335,8 +353,8 @@ StudyMember 독서실에 오신 것을 환영합니다.
     
     
 
-while(True):
-    MenuList()
+
+MenuList()
 
 
 
