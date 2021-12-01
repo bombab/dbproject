@@ -198,6 +198,7 @@ def Op3_StudyRoomRegister() :
                         return
                     else : continue
                 else : break
+                
             # 사람 명 수 만큼 휴대폰 번호 입력 
             for i in range(PeopleNum) : 
                 while(True):
@@ -214,6 +215,27 @@ def Op3_StudyRoomRegister() :
                     else : break
                 RegisterRoomCommand = "UPDATE MEMBER SET MEMBER.R_NUMBER = %d WHERE M_PHONE = %d"
                 cur.execute(RegisterRoomCommand,(SelectRoomNum,PhoneNumber))
+            
+            # 이용 시간 입력, 시작시간은 정각이어야 하며 시간 단위로 입력해야한다.
+            while (True) :
+                while(True) :
+                    StartYear,Month,Day,Hour =  input("이용시작 시간 년/월/일/시간 콤마 단위로 10글자 ex) 2010,01,01,17 : ").spilt(',')
+                    if len(RoomStartTime) == 10: break
+                    print("[입력오류]: 결제일 등록을 위해서는 년/월/일/시간 10글자를 입력해주셔야 합니다.")
+                
+                while(True) :
+                    if int(PaymentDate) <= int(StartDate) : break
+                    print("[입력오류]: 시작일이 결제일보다 이를수는 없습니다. 다시 입력해주세요.\n")
+                try:
+                    datetime.datetime(int(PaymentDate[0:4]),int(PaymentDate[4:6]),int(PaymentDate[6:8]))
+                    datetime.datetime(int(StartDate[0:4]),int(StartDate[4:6]),int(StartDate[6:8]))
+                    break
+                except ValueError: 
+                    print("\n[입력오류]: 결제 날짜 혹은 시작일 날짜를 잘못 입력하였습니다. 다시 입력해주세요.\n")
+                    continue 
+            
+            RegisterTimeCommand = ""
+            
             
         conn.commit()
 
