@@ -88,11 +88,10 @@ def Op1_MemberRegister() :
 선택한 좌석에 대한 결제일과 시작일을 년월일 기준으로 8글자를 입력해주세요.
 ====================================================\n''')
         while (True) :
-            while(True) :
-                PaymentDate =  input("결제일 8글자 ex) 20100101 : ")
-                if len(PaymentDate) == 8: break
-                print("[입력오류]: 결제일 등록을 위해서는 년월일 8글자를 입력해주셔야 합니다.")
-            while(True) :
+             # 결제일 등록, 결제일의 경우 자동으로 현재시각에 맞춤
+            PaymentDate = datetime.datetime.today().strftime("%Y%m%d")
+    
+            while(True) : #시작일 등록
                 StartDate = input("시작일 8글자 ex) 20100101 :")
                 if len(StartDate) == 8: break
                 print("[입력오류]: 시작일 등록을 위해서는 년월일 8글자를 입력해주셔야 합니다.")
@@ -100,33 +99,36 @@ def Op1_MemberRegister() :
                 if int(PaymentDate) <= int(StartDate) : break
                 print("[입력오류]: 시작일이 결제일보다 이를수는 없습니다. 다시 입력해주세요.\n")
             try:
-                datetime.datetime(int(PaymentDate[0:4]),int(PaymentDate[4:6]),int(PaymentDate[6:8]))
                 datetime.datetime(int(StartDate[0:4]),int(StartDate[4:6]),int(StartDate[6:8]))
                 break
             except ValueError: 
-                print("\n[입력오류]: 결제 날짜 혹은 시작일 날짜를 잘못 입력하였습니다. 다시 입력해주세요.\n")
+                print("\n[입력오류]: 시작일 날짜를 잘못 입력하였습니다. 다시 입력해주세요.\n")
                 continue
             
         TransPD = PaymentDate[0:4] +"-" + PaymentDate[4:6] + "-" + PaymentDate[6:8]
         TransSD = StartDate[0:4] + "-" + StartDate[4:6] + "-" + StartDate[6:8] 
         
         # EndDate 계산
-        EndDate = datetime.datetime(int(StartDate[0:4]),int(StartDate[4:6]),int(StartDate[6:8])) + datetime.timedelta(days = 30)
-        TransED = str(EndDate.year) + "-" + str(EndDate.month) + "-" + str(EndDate.day)
+        EndDate = datetime.datetime.strptime(StartDate,'%Y%m%d') + datetime.timedelta(days = 30)
+        TransED = EndDate.isoformat()[:10]
+        
         
         # MySQL에 반영
         print("\n회원을 등록합니다.")
         INSERTMemberCommand = "INSERT INTO MEMBER(M_PHONE, M_NAME, M_ADDRESS, M_REST,S_NUMBER,R_NUMBER) VALUES (%s, %s, %s, %s, %s, %s)" 
         UPDATESeatCommand = "UPDATE SEAT SET S_START = %s, S_END = %s, S_PAYMENT = %s WHERE S_NUMBER = (SELECT S_NUMBER FROM MEMBER WHERE M_PHONE = %s)"
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(INSERTMemberCommand,(PhoneNumber,Name,Address,RestRoomTime,SelectSeatNum,None))
-                cur.execute(UPDATESeatCommand,(TransSD,TransED,TransPD,PhoneNumber))
-                conn.commit()
+        
+        with conn.cursor() as cur:
+            cur.execute(INSERTMemberCommand,(PhoneNumber,Name,Address,RestRoomTime,SelectSeatNum,None))
+            cur.execute(UPDATESeatCommand,(TransSD,TransED,TransPD,PhoneNumber))
+            conn.commit()
             
 
 
 # 메뉴 2번. 입실 등록
+
+
+ 
 
 def Op2_EnterRegister() :
     conn, cursor = ConnectMySQL()
@@ -141,6 +143,9 @@ def Op2_EnterRegister() :
     if IsThereAnyNum == False:
         print('''회원 등록이 되어있지 않습니다.
 입실하려면 먼저 회원등록을 하셔야합니다.''')
+        
+    #### 시작일과 입실일 비교하는 과정추가가 필요함    
+        
     else:
         with conn.cursor() as cur:
             EnterRegisterCommand = "UPDATE DOOR SET D_ENTER = SYSDATE() WHERE D_NUMBER = (SELECT S_NUMBER FROM MEMBER WHERE M_PHONE = %s)"
@@ -218,19 +223,6 @@ def Op3_StudyRoomRegister() :
                 cur.execute(RegisterRoomCommand,(SelectRoomNum,PhoneNumber))
                 conn.commit()
             
-            
-               
-                # 시작 시간 입력, 시작시간은 정각이어야 하며 시간 단위로 입력해야한다.
-            while(True) :
-                print('''이용 시작 시각을 입력합니다.
-년/월/일/시간을 콤마 단위로 10글자 입력해주세요. ex) 2015년 10월 24일 05시 => 2015,10,24,05''')
-                StartYear, StartMonth, StartDay, StartHour =  input("이용시작 시각 입력 : ").split(',')
-                try:
-                    datetime.datetime(int(StartYear),int(StartMonth),int(StartDay),int(StartHour))
-                    break
-                except ValueError:
-                    print("\n[입력오류]: 시작 시간을 잘못 입력하였습니다. 다시 입력해주세요.\n")
-                    continue
               
                 # 이용 시간 입력, 이용 시간은 시간 단위이며, 이용자 모두 남은 잔여시간이 이용시간 보다 같거나 커야 한다.
             while(True) :
@@ -247,14 +239,22 @@ def Op3_StudyRoomRegister() :
                     print("회원 중 이용시간에 비해 잔여시간이 부족한 회원이 있습니다. 다시 입력해주세요.\n")
                 else : break
             
+                            # 시작 시간은 스터디룸 등록을 시도하는 현재 시각에 맞추어 자동으로 분 단위까지 입력
+            
+            print("\n이용시작 시간이 설정되었습니다. 이용 시작 시간은 현재시각을 기준으로 등록됩니다.\n")
+            StartTime = datetime.datetime.today().strftime("%Y%m%d%H%M")
+                
+            
+             
             # 해당 회원들의 시작시간, 종료시간 파악
-            StartTime = datetime.datetime(int(StartYear),int(StartMonth),int(StartDay),int(StartHour))
-            EndTime = StartTime + datetime.timedelta(hours = TimeOfUse)
-
+            
+            EndTime = datetime.datetime.strptime(StartTime,'%Y%m%d%H%M') + datetime.timedelta(hours = TimeOfUse)
+            StartTime = datetime.datetime.strptime(StartTime,'%Y%m%d%H%M')
+            
             # 시작시간, 종료시간 문자열로 변형
             
-            TransST = str(StartTime.year) + "-" + str(StartTime.month) + "-" + str(StartTime.day) + " " + str(StartTime.hour) + ":00:00" 
-            TransET = str(EndTime.year) + "-" + str(EndTime.month) + "-" + str(EndTime.day) + " " + str(EndTime.hour) + ":00:00"
+            TransST = StartTime.strftime('%Y-%m-%d %H:%M:%S') 
+            TransET = EndTime.strftime('%Y-%m-%d %H:%M:%S')
             
             # 시간 등록 명령 실행
             RegisterTimeCommand = "UPDATE ROOM SET   R_START = %s, R_END = %s , R_TIME = %s WHERE R_NUMBER = %s"
