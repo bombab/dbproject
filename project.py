@@ -354,12 +354,67 @@ def Op4_ChangeSeatNum() :
                 cur.execute(UpDateSeatCommand,(SeatData[0]["S_START"],SeatData[0]["S_END"],SeatData[0]["S_PAYMENT"],PhoneNumber))
                 conn.commit()
                 print('''============================
-좌석변경이 완료되었습니다.
+좌석 변경이 완료되었습니다.
 ============================\n''')
                     
+
+
+
+
+
+
+# 메뉴 5번. 좌석 대여 연장
+
+def Op5_ExtendSeatDate () :
+    conn, cursor = ConnectMySQL()
+    
+    cursor.execute('USE StudyMember;')
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
+        print('''====================================
+좌석연장 절차를 시작합니다.
+연장은 30일 단위로 갱신할수 있습니다.
+휴대폰번호 뒤 8자리를 입력해주세요.
+====================================\n''')
+        IsThereAnyNum, PhoneNumber = SearchPhoneNumber()
+        if IsThereAnyNum == False :
+            print('''잘못 입력하셨거나 회원 등록이 되어있지 않습니다.
+ 메뉴로 돌아갑니다.\n''')
+        else :
+            MySeatDataCommand = '''SELECT * FROM SEAT WHERE S_NUMBER =
+							        (SELECT S_NUMBER
+                                    FROM MEMBER
+                                    WHERE M_PHONE = %s)'''
+                
+            cur.execute(MySeatDataCommand,PhoneNumber)
+            SeatData = cur.fetchall()
+            AfterExtendTime = SeatData[0]["S_END"] + datetime.timedelta(days = 30)
+            SeatData[0]["S_END"] = AfterExtendTime.strftime('%Y-%m-%d')
+            
+            UpDateSeatCommand = ''' UPDATE SEAT
+                                        SET S_END = %s
+                                        WHERE S_NUMBER = 
+                                                    (SELECT S_NUMBER
+	                                                FROM   MEMBER
+		                                            WHERE  M_PHONE = %s)'''
+            cur.execute(UpDateSeatCommand,(SeatData[0]["S_END"],PhoneNumber))            
+            conn.commit()
+            print('''============================
+좌석 연장이 완료되었습니다.
+============================\n''')
+
+
+# 메뉴 6번. 퇴실 등록
+
+def Op6_ExitRegister () :
+    pass
+
+
+
+
+
+
 ##INSERT INTO SEAT VALUES(6,'작은방',150000,'2021-11-11','2021-12-10','2021-11-11');
 ##INSERT INTO MEMBER VALUES (87651346,'이름','주소',20,좌석번호,NULL);
-
 
 # 메뉴 7번. 메뉴 종료
 
@@ -398,7 +453,7 @@ StudyMember 독서실에 오신 것을 환영합니다.
         
     elif SelectedButtion == 2:
         
-        Op2_EnterRegister() # 입실절차 수행
+        Op2_EnterRegister() # 입실 절차 수행
          
     elif SelectedButtion == 3:
         
@@ -409,9 +464,13 @@ StudyMember 독서실에 오신 것을 환영합니다.
         Op4_ChangeSeatNum() # 좌석 변경 수행
          
     elif SelectedButtion == 5:
-        pass 
+        
+        Op5_ExtendSeatDate() # 좌석 대여 연장 수행
+         
     elif SelectedButtion == 6:
-        pass
+        
+        Op6_ExitRegister () # 퇴실 절차 수행
+        
     elif SelectedButtion == 7:
         
         Op7_ExitMenu() # 메뉴 종료 절차 수행
