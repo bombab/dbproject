@@ -323,7 +323,7 @@ def Op3_StudyRoomRegister() :
                     if i["R_NUMBER"] == SelectRoomNum :
                         SelectedRoom = i
                         ForOutWhile = 1
-                    break
+                    
                 if ForOutWhile == 1 : break 
                 print("\n[입력오류]: 잘못 누르셨습니다. 메뉴에 있는 스터디룸 번호만을 선택해주세요.\n")
             
