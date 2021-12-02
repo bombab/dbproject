@@ -141,8 +141,27 @@ def ResetRoom () :
         
 # 함수 DeleteMem_ResetSeat, ResetRoom 스케줄링 
 
-ScheduleJob_1 = schedule.every().day.at("00:00:01").do(DeleteMem_ResetSeat)
-ScheduleJob_2 = schedule.every().minute.at(":01").do(ResetRoom)
+
+
+def Thread_function ():
+
+    schedule.every().day.at("00:00:01").do(DeleteMem_ResetSeat)
+    schedule.every().minute.at(":01").do(ResetRoom)
+    
+    while(True) :
+        schedule.run_pending()
+        time.sleep(1)
+
+# 스레드모듈 를 통한 스케쥴링 함수와 메뉴 발생을 병렬처리
+
+threadTool = threading.Thread(target = Thread_function)
+threadTool.daemon = True
+threadTool.start()
+
+
+
+
+
 
 # 메뉴 1번. 회원가입 및 신규 좌석 대여 등록
 
