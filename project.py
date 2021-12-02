@@ -1,5 +1,9 @@
 import pymysql
 import datetime
+import sys
+import time
+import schedule
+
 
 
 #변수 선언
@@ -141,7 +145,7 @@ def Op1_MemberRegister() :
         
         
         # MySQL에 반영
-        print("\n회원을 등록합니다.")
+        print("\n회원을 등록합니다.\n")
         INSERTMemberCommand = "INSERT INTO MEMBER(M_PHONE, M_NAME, M_ADDRESS, M_REST,S_NUMBER,R_NUMBER) VALUES (%s, %s, %s, %s, %s, %s)" 
         UPDATESeatCommand = "UPDATE SEAT SET S_START = %s, S_END = %s, S_PAYMENT = %s WHERE S_NUMBER = (SELECT S_NUMBER FROM MEMBER WHERE M_PHONE = %s)"
         
@@ -149,7 +153,10 @@ def Op1_MemberRegister() :
             cur.execute(INSERTMemberCommand,(PhoneNumber,Name,Address,RestRoomTime,SelectSeatNum,None))
             cur.execute(UPDATESeatCommand,(TransSD,TransED,TransPD,PhoneNumber))
             conn.commit()
-            
+            print('''\n===============================
+회원 등록이 완료되었습니다.
+===============================\n''')
+            time.sleep(2)
 
 
 
@@ -176,14 +183,14 @@ def Op2_EnterRegister() :
     
     if CheckEnterFinished == False :
         print("\n입실등록이 이미 완료된 상황입니다.\n")
-        
+        time.sleep(2)
     else:
         with conn.cursor() as cur:
             EnterRegisterCommand = "UPDATE DOOR SET D_ENTER = SYSDATE() WHERE D_NUMBER = (SELECT S_NUMBER FROM MEMBER WHERE M_PHONE = %s)"
             cur.execute(EnterRegisterCommand,PhoneNumber)
             conn.commit()
         print("\n입실 등록이 완료되었습니다.\n")
-
+        time.sleep(2)
 
 
 
@@ -313,7 +320,7 @@ def Op3_StudyRoomRegister() :
             print('''\n===============================
 스터디룸 등록이 완료되었습니다.
 ===============================\n''')
-            
+            time.sleep(2)
 
 
 
@@ -394,7 +401,6 @@ def Op4_ChangeSeatNum() :
 											            FROM   MEMBER
 											            WHERE  M_PHONE = %s)'''
                 
-                #ChangeDoorCommand = '''UPDATE DOOR SET DOOR.'''
                 
                 cur.execute(UpDateSeatCommand,(None,None,None,PhoneNumber))
                 cur.execute(UpDateDoorCommand,(None,None,PhoneNumber))
@@ -405,7 +411,7 @@ def Op4_ChangeSeatNum() :
                 print('''============================
 좌석 변경이 완료되었습니다.
 ============================\n''')
-                    
+                time.sleep(2)
 
 
 
@@ -450,6 +456,7 @@ def Op5_ExtendSeatDate () :
             print('''============================
 좌석 연장이 완료되었습니다.
 ============================\n''')
+            time.sleep(2)
 
 
 # 메뉴 6번. 퇴실 등록
@@ -480,6 +487,7 @@ def Op6_ExitRegister () :
                 cur.execute(EnterRegisterCommand,PhoneNumber)
                 conn.commit()
                 print("\n퇴실 등록이 완료되었습니다.\n")
+                time.sleep(2)
 
 
 
@@ -487,7 +495,9 @@ def Op6_ExitRegister () :
 # 메뉴 7번. 메뉴 종료
 
 def Op7_ExitMenu() :
-    print("\n메뉴를 나갑니다.\n") 
+    
+    print("\n메뉴 프로그램을 완전히 종료합니다.\n")
+    sys.exit()
 
 
 
@@ -545,7 +555,7 @@ StudyMember 독서실에 오신 것을 환영합니다.
     elif SelectedButtion == 7:
         
         Op7_ExitMenu() # 메뉴 종료 절차 수행
-              
+                
     else :
         print('''\n****************************************************
 누르신 항목이 메뉴에 없습니다. 다시 입력해주세요.
@@ -554,8 +564,7 @@ StudyMember 독서실에 오신 것을 환영합니다.
     
     
 
-
-MenuList()
+while(True) : MenuList()
 
 
 
