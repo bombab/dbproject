@@ -59,7 +59,7 @@ def CheckEnterRegister(PhoneNumber) :
         if DoorData[0]["D_ENTER"] == None or DoorData[0]["D_ENTER"] < DoorData[0]["D_LEAVE"] : return False
         else : return True
 
-# 스케쥴링 회원 삭제 함수
+# 스케쥴링 회원 삭제 후 좌석 비우기 함수
 
 # 스케쥴링 스터디룸 비우기 함수
 
@@ -367,9 +367,16 @@ def Op4_ChangeSeatNum() :
                                     FROM MEMBER
                                     WHERE M_PHONE = %s)'''
                 
+                MyDoorDataCommand = '''SELECT * FROM DOOR WHERE D_NUMBER =
+							        (SELECT S_NUMBER
+                                    FROM MEMBER
+                                    WHERE M_PHONE = %s)'''
+                
+                
                 cur.execute(MySeatDataCommand,PhoneNumber)
                 SeatData = cur.fetchall()
-                
+                cur.execute(MyDoorDataCommand,PhoneNumber)
+                DoorData = cur.fetchall()
                 
                 UpDateSeatCommand = ''' UPDATE SEAT
                                         SET S_START = %s , S_END = %s , S_PAYMENT = %s
@@ -380,10 +387,20 @@ def Op4_ChangeSeatNum() :
                 
                 ChangeSeatCommand = "UPDATE MEMBER SET MEMBER.S_NUMBER = %s WHERE M_PHONE = %s"
                 
+                UpDateDoorCommand = '''UPDATE DOOR 
+                                       SET D_ENTER = %s , D_LEAVE = %s 
+							           WHERE D_NUMBER = 
+											            (SELECT S_NUMBER
+											            FROM   MEMBER
+											            WHERE  M_PHONE = %s)'''
+                
+                #ChangeDoorCommand = '''UPDATE DOOR SET DOOR.'''
                 
                 cur.execute(UpDateSeatCommand,(None,None,None,PhoneNumber))
+                cur.execute(UpDateDoorCommand,(None,None,PhoneNumber))
                 cur.execute(ChangeSeatCommand,(int(SelectSeatNum),PhoneNumber))
                 cur.execute(UpDateSeatCommand,(SeatData[0]["S_START"],SeatData[0]["S_END"],SeatData[0]["S_PAYMENT"],PhoneNumber))
+                cur.execute(UpDateDoorCommand,(DoorData[0]["D_ENTER"],DoorData[0]["D_LEAVE"],PhoneNumber))
                 conn.commit()
                 print('''============================
 좌석 변경이 완료되었습니다.
@@ -467,16 +484,14 @@ def Op6_ExitRegister () :
 
 
 
-
-
-##INSERT INTO SEAT VALUES(6,'작은방',150000,'2021-11-11','2021-12-10','2021-11-11');
-##INSERT INTO MEMBER VALUES (87651346,'이름','주소',20,좌석번호,NULL);
-
 # 메뉴 7번. 메뉴 종료
 
 def Op7_ExitMenu() :
     print("\n메뉴를 나갑니다.\n") 
 
+
+
+# 전체 메뉴 리스트 불러오기
 
 def MenuList() :
     MENU = '''====================================================
