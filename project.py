@@ -60,9 +60,9 @@ def CheckEnterRegister(PhoneNumber) :
                                                     WHERE M_PHONE = %s)'''
         cur.execute(SelectDoorDataCommand,PhoneNumber)
         DoorData = cur.fetchall()
-        if DoorData[0]["D_ENTER"] == None :
+        if DoorData[0]["ENTER_TIME"] == None :
             return False
-        elif DoorData[0]["D_LEAVE"] != None and DoorData[0]["D_ENTER"] < DoorData[0]["D_LEAVE"] :
+        elif DoorData[0]["LEAVE_TIME"] != None and DoorData[0]["ENTER_TIME"] < DoorData[0]["LEAVE_TIME"] :
             return False
         else : return True
 
@@ -77,11 +77,11 @@ def DeleteMem_ResetSeat () :
     with conn.cursor(pymysql.cursors.DictCursor) as cur:
         
         SearchEndSeatCommand ='''SELECT * FROM MEMBER,SEAT 
-                                WHERE MEMBER.S_NUMBER = SEAT.S_NUMBER AND S_END < CURDATE()'''
+                                WHERE MEMBER.S_NUMBER = SEAT.S_NUMBER AND RENT_END < CURDATE()'''
         
         Search2WeekExcessCommand = '''SELECT * FROM MEMBER,DOOR 
                                     WHERE MEMBER.S_NUMBER = DOOR.D_NUMBER AND 
-                                    DATE(D_LEAVE) < SUBDATE(CURDATE(), INTERVAL 14 DAY)'''
+                                    DATE(LEAVE_TIME) < SUBDATE(CURDATE(), INTERVAL 14 DAY)'''
                                             
         cur.execute(SearchEndSeatCommand)
         EndSeatList = cur.fetchall() 
@@ -91,13 +91,13 @@ def DeleteMem_ResetSeat () :
         DeleteMemCommand = "DELETE FROM MEMBER WHERE M_PHONE = %s"
         
         ResetSeatCommand = '''UPDATE SEAT
-                            SET S_START = NULL, S_END = NULL , S_PAYMENT = NULL
+                            SET RENT_START = NULL, RENT_END = NULL , RENT_PAYMENT = NULL
                             WHERE S_NUMBER = 
                                             (SELECT S_NUMBER
 	                                        FROM   MEMBER
 		                                    WHERE  M_PHONE = %s)''' 
         ResetDoorCommand ='''UPDATE DOOR
-                            SET D_ENTER = NULL, D_LEAVE = NULL
+                            SET ENTER_TIME = NULL, LEAVE_TIME = NULL
                             WHERE D_NUMBER = 
                                             (SELECT S_NUMBER
 	                                        FROM   MEMBER
@@ -127,12 +127,12 @@ def ResetRoom () :
     conn, cursor = ConnectMySQL()
     cursor.execute('USE StudyMember;')
     with conn.cursor(pymysql.cursors.DictCursor) as cur:
-        SearchRoomCommand = "SELECT ROOM.R_NUMBER, M_PHONE FROM ROOM, MEMBER WHERE ROOM.RES_END < SYSDATE()"    
+        SearchRoomCommand = "SELECT ROOM.R_NUMBER, M_PHONE FROM ROOM, MEMBER WHERE ROOM.SER_END < SYSDATE()"    
         cur.execute(SearchRoomCommand)
         RoomExcessList = cur.fetchall()
 
         ResetMemCommand = "UPDATE MEMBER SET R_NUMBER = %s WHERE M_PHONE = %s"
-        ResetRoomCommand = "UPDATE ROOM SET R_START = NULL, R_END = NULL, R_TIME = NULL WHERE R_NUMBER = %s;"
+        ResetRoomCommand = "UPDATE ROOM SET SER_START = NULL, SER_END = NULL, SER_TIME = NULL WHERE R_NUMBER = %s;"
         
         for i in RoomExcessList :
             cur.execute(ResetMemCommand,(i["R_NUMBER"],i["M_PHONE"]))
@@ -169,7 +169,7 @@ def Op1_MemberRegister() :
     conn, cursor = ConnectMySQL()
     
     cursor.execute('USE StudyMember;')
-    cursor.execute('SELECT * FROM seat WHERE S_Start IS NULL ORDER BY S_Number')
+    cursor.execute('SELECT * FROM seat WHERE RENT_Start IS NULL ORDER BY S_Number')
     RemainedSeat = cursor.fetchall()
     IsThereAnyEmptySeat = bool(RemainedSeat)
     
@@ -200,7 +200,7 @@ def Op1_MemberRegister() :
 ====================================================\n''')
         while(True) :
             for i in RemainedSeat:
-                print(str(i["S_NUMBER"])+"번 좌석, 방 유형 : " + i["S_TYPE"] + " 이용요금 : " + str(i["S_CHARGE"]))
+                print(str(i["S_NUMBER"])+"번 좌석, 방 유형 : " + i["S_TYPE"] + " 이용요금 : " + str(i["RENT_CHARGE"]))
             print("\n")
             SelectSeatNum = int(input("신규 등록할 좌석 번호 : "))
             if SelectSeatNum in [i["S_NUMBER"] for i in RemainedSeat] : break
@@ -237,8 +237,8 @@ def Op1_MemberRegister() :
         
         # MySQL에 반영
         print("\n회원을 등록합니다.\n")
-        INSERTMemberCommand = "INSERT INTO MEMBER(M_PHONE, M_NAME, M_ADDRESS, M_REST,S_NUMBER,R_NUMBER) VALUES (%s, %s, %s, %s, %s, %s)" 
-        UPDATESeatCommand = "UPDATE SEAT SET S_START = %s, S_END = %s, S_PAYMENT = %s WHERE S_NUMBER = (SELECT S_NUMBER FROM MEMBER WHERE M_PHONE = %s)"
+        INSERTMemberCommand = "INSERT INTO MEMBER(M_PHONE, M_NAME, M_ADDRESS, SER_REMAINING,S_NUMBER,R_NUMBER) VALUES (%s, %s, %s, %s, %s, %s)" 
+        UPDATESeatCommand = "UPDATE SEAT SET RENT_START = %s, RENT_END = %s, RENT_PAYMENT = %s WHERE S_NUMBER = (SELECT S_NUMBER FROM MEMBER WHERE M_PHONE = %s)"
         
         with conn.cursor() as cur:
             cur.execute(INSERTMemberCommand,(PhoneNumber,Name,Address,RestRoomTime,SelectSeatNum,None))
@@ -277,7 +277,7 @@ def Op2_EnterRegister() :
         time.sleep(2)
     else:
         with conn.cursor() as cur:
-            EnterRegisterCommand = "UPDATE DOOR SET D_ENTER = SYSDATE() WHERE D_NUMBER = (SELECT S_NUMBER FROM MEMBER WHERE M_PHONE = %s)"
+            EnterRegisterCommand = "UPDATE DOOR SET ENTER_TIME = SYSDATE() WHERE D_NUMBER = (SELECT S_NUMBER FROM MEMBER WHERE M_PHONE = %s)"
             cur.execute(EnterRegisterCommand,PhoneNumber)
             conn.commit()
         print("\n입실 등록이 완료되었습니다.\n")
@@ -294,7 +294,7 @@ def Op3_StudyRoomRegister() :
     
     cursor.execute('USE StudyMember;')
     
-    SearchRestRoomCommand = "SELECT * FROM ROOM WHERE RES_START IS NULL"
+    SearchRestRoomCommand = "SELECT * FROM ROOM WHERE SER_START IS NULL"
     with conn.cursor(pymysql.cursors.DictCursor) as cur:
         cur.execute(SearchRestRoomCommand)
         RestRoom = cur.fetchall()
@@ -373,11 +373,11 @@ def Op3_StudyRoomRegister() :
                 print("이용 시간을 입력합니다. 시간 단위로 입력가능합니다.")      
                 TimeOfUse = int(input("이용 시간 입력 : "))
                 RestTimeList = []
-                SelectRestTimeCommand = "SELECT M_REST FROM MEMBER, ROOM WHERE MEMBER.R_NUMBER = ROOM.R_NUMBER"
+                SelectRestTimeCommand = "SELECT SER_REMAINING FROM MEMBER, ROOM WHERE MEMBER.R_NUMBER = ROOM.R_NUMBER"
                 cur.execute(SelectRestTimeCommand)
                 Resttime = cur.fetchall()
                 for i in range(PeopleNum) : 
-                    RestTimeList.append(Resttime[i]["M_REST"])
+                    RestTimeList.append(Resttime[i]["SER_REMAINING"])
                     RestTimeList[i] = RestTimeList[i] - TimeOfUse
                 if min(RestTimeList) < 0: 
                     print("회원 중 이용시간에 비해 잔여시간이 부족한 회원이 있습니다. 다시 입력해주세요.\n")
@@ -401,12 +401,12 @@ def Op3_StudyRoomRegister() :
             TransET = EndTime.strftime('%Y-%m-%d %H:%M:%S')
             
             # 시간 등록 명령 실행
-            RegisterTimeCommand = "UPDATE ROOM SET RES_START = %s, RES_END = %s , RES_TIME = %s WHERE R_NUMBER = %s"
+            RegisterTimeCommand = "UPDATE ROOM SET SER_START = %s, SER_END = %s , SER_TIME = %s WHERE R_NUMBER = %s"
             cur.execute(RegisterTimeCommand,(TransST,TransET,TimeOfUse,SelectRoomNum))
             conn.commit()
             
             #이용자들의 잔여시간 차감 명령 실행
-            SubRestTimeCommand = "UPDATE MEMBER SET M_REST = M_REST - %s WHERE R_NUMBER = %s"
+            SubRestTimeCommand = "UPDATE MEMBER SET SER_REMAINING = SER_REMAINING - %s WHERE R_NUMBER = %s"
             cur.execute(SubRestTimeCommand,(TimeOfUse,SelectRoomNum))
             conn.commit()
             print('''\n===============================
@@ -437,7 +437,7 @@ def Op4_ChangeSeatNum() :
                 print("\n 좌석변경전 먼저 입실등록을 해주셔야 합니다. 메뉴로 돌아갑니다. \n")
                 return
             
-            SearchSeatCommand = '''SELECT * FROM seat WHERE S_Start IS NULL and S_TYPE = 
+            SearchSeatCommand = '''SELECT * FROM seat WHERE RENT_Start IS NULL and S_TYPE = 
                                 (SELECT seat.S_TYPE FROM seat, member 
                                 WHERE seat.s_number = member.s_number and member.m_phone = %s) 
                                 ORDER BY S_Number'''
@@ -478,7 +478,7 @@ def Op4_ChangeSeatNum() :
                 DoorData = cur.fetchall()
                 
                 UpDateSeatCommand = ''' UPDATE SEAT
-                                        SET S_START = %s , S_END = %s , S_PAYMENT = %s
+                                        SET RENT_START = %s , RENT_END = %s , RENT_PAYMENT = %s
                                         WHERE S_NUMBER = 
                                                     (SELECT S_NUMBER
 	                                                FROM   MEMBER
@@ -487,7 +487,7 @@ def Op4_ChangeSeatNum() :
                 ChangeSeatCommand = "UPDATE MEMBER SET MEMBER.S_NUMBER = %s WHERE M_PHONE = %s"
                 
                 UpDateDoorCommand = '''UPDATE DOOR 
-                                       SET D_ENTER = %s , D_LEAVE = %s 
+                                       SET ENTER_TIME = %s , LEAVE_TIME = %s 
 							           WHERE D_NUMBER = 
 											            (SELECT S_NUMBER
 											            FROM   MEMBER
@@ -497,8 +497,8 @@ def Op4_ChangeSeatNum() :
                 cur.execute(UpDateSeatCommand,(None,None,None,PhoneNumber))
                 cur.execute(UpDateDoorCommand,(None,None,PhoneNumber))
                 cur.execute(ChangeSeatCommand,(int(SelectSeatNum),PhoneNumber))
-                cur.execute(UpDateSeatCommand,(SeatData[0]["S_START"],SeatData[0]["S_END"],SeatData[0]["S_PAYMENT"],PhoneNumber))
-                cur.execute(UpDateDoorCommand,(DoorData[0]["D_ENTER"],DoorData[0]["D_LEAVE"],PhoneNumber))
+                cur.execute(UpDateSeatCommand,(SeatData[0]["RENT_START"],SeatData[0]["RENT_END"],SeatData[0]["RENT_PAYMENT"],PhoneNumber))
+                cur.execute(UpDateDoorCommand,(DoorData[0]["ENTER_TIME"],DoorData[0]["LEAVE_TIME"],PhoneNumber))
                 conn.commit()
                 print('''============================
 좌석 변경이 완료되었습니다.
@@ -534,16 +534,16 @@ def Op5_ExtendSeatDate () :
                 
             cur.execute(MySeatDataCommand,PhoneNumber)
             SeatData = cur.fetchall()
-            AfterExtendTime = SeatData[0]["S_END"] + datetime.timedelta(days = 30)
-            SeatData[0]["S_END"] = AfterExtendTime.strftime('%Y-%m-%d')
+            AfterExtendTime = SeatData[0]["RENT_END"] + datetime.timedelta(days = 30)
+            SeatData[0]["RENT_END"] = AfterExtendTime.strftime('%Y-%m-%d')
             
             UpDateSeatCommand = ''' UPDATE SEAT
-                                    SET S_END = %s
+                                    SET RENT_END = %s
                                     WHERE S_NUMBER = 
                                                     (SELECT S_NUMBER
 	                                                FROM   MEMBER
 		                                            WHERE  M_PHONE = %s)'''
-            cur.execute(UpDateSeatCommand,(SeatData[0]["S_END"],PhoneNumber))            
+            cur.execute(UpDateSeatCommand,(SeatData[0]["RENT_END"],PhoneNumber))            
             conn.commit()
             print('''============================
 좌석 연장이 완료되었습니다.
@@ -575,7 +575,7 @@ def Op6_ExitRegister () :
             if CheckEnterFinished == False : print("\n퇴실을 하시려면 먼저 입실을 해주셔야 합니다.")
 
             else :
-                EnterRegisterCommand = "UPDATE DOOR SET D_LEAVE = SYSDATE() WHERE D_NUMBER = (SELECT S_NUMBER FROM MEMBER WHERE M_PHONE = %s)"
+                EnterRegisterCommand = "UPDATE DOOR SET LEAVE_TIME = SYSDATE() WHERE D_NUMBER = (SELECT S_NUMBER FROM MEMBER WHERE M_PHONE = %s)"
                 cur.execute(EnterRegisterCommand,PhoneNumber)
                 conn.commit()
                 print("\n퇴실 등록이 완료되었습니다.\n")
@@ -657,12 +657,4 @@ StudyMember 독서실에 오신 것을 환영합니다.
     
 
 while(True) : MenuList()
-
-
-
-
-
-
-
-
 
