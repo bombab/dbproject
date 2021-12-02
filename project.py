@@ -42,6 +42,23 @@ def SearchPhoneNumber() :
     return (IsThereAnyNum, PhoneNumber)
 
 
+# 입실 여부 조회
+
+def CheckEnterRegister(PhoneNumber) :
+    conn, cursor = ConnectMySQL()
+    cursor.execute('USE StudyMember;')
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
+            
+        SelectDoorDataCommand = '''SELECT * FROM DOOR 
+                                    WHERE  D_NUMBER = 
+									                (SELECT S_NUMBER 
+                                                    FROM MEMBER 
+                                                    WHERE M_PHONE = %s)'''
+        cur.execute(SelectDoorDataCommand,PhoneNumber)
+        DoorData = cur.fetchall()
+        if DoorData[0]["D_ENTER"] == None or DoorData[0]["D_ENTER"] < DoorData[0]["D_LEAVE"] : return False
+        else : return True
+
 # 스케쥴링 회원 삭제 함수
 
 # 스케쥴링 스터디룸 비우기 함수
@@ -153,7 +170,12 @@ def Op2_EnterRegister() :
         print('''회원 등록이 되어있지 않습니다.
 입실하려면 먼저 회원등록을 하셔야합니다.''')
         
-    #### 시작일과 입실일 비교하는 과정추가가 필요함    
+    #### 시작일과 입실일 비교하는 과정추가가 필요함
+    
+    CheckEnterFinished = not CheckEnterRegister(PhoneNumber)    
+    
+    if CheckEnterFinished == False :
+        print("\n입실등록이 이미 완료된 상황입니다.\n")
         
     else:
         with conn.cursor() as cur:
@@ -228,7 +250,7 @@ def Op3_StudyRoomRegister() :
                 while(True):
                     print("휴대폰 번호 뒤 8자리를 입력해주세요.")
                     IsThereAnyNum, PhoneNumber = SearchPhoneNumber()
-                    if IsThereAnyNum == False:
+                    if IsThereAnyNum == False: # 휴대폰 번호가 등록되어 있지 않을 경우
                         print('''해당 휴대폰 번호는 회원 명단에 없습니다.
 다시 입력하고 싶으시면 아무키를 누르시고, 메뉴로 돌아가 회원가입을 원하시면 1번을 눌러주세요.\n''')      
                         SelectButton = input("입력: ")
@@ -236,7 +258,12 @@ def Op3_StudyRoomRegister() :
                             conn.commit()
                             return
                         else : continue
-                    else : break
+                    else : # 먼저 입실을 하지 않았을 경우
+                        CheckEnterFinished = CheckEnterRegister(PhoneNumber)
+                        if CheckEnterFinished == False :
+                            print("\n 해당 회원은 스터디룸 등록전 먼저 입실을 완료해주셔야 합니다. 메뉴로 돌아갑니다.\n")
+                            return
+                        else : break
                 RegisterRoomCommand = "UPDATE MEMBER SET MEMBER.R_NUMBER = %s WHERE M_PHONE = %s"
                 cur.execute(RegisterRoomCommand,(SelectRoomNum,PhoneNumber))
                 conn.commit()
@@ -306,6 +333,11 @@ def Op4_ChangeSeatNum() :
             print('''잘못 입력하셨거나 회원 등록이 되어있지 않습니다.
  메뉴로 돌아갑니다.\n''')
         else :
+            CheckEnterFinished = CheckEnterRegister(PhoneNumber)
+            if CheckEnterFinished == False :
+                print("\n 좌석변경전 먼저 입실등록을 해주셔야 합니다. 메뉴로 돌아갑니다. \n")
+                return
+            
             SearchSeatCommand = '''SELECT * FROM seat WHERE S_Start IS NULL and S_TYPE = 
                                 (SELECT seat.S_TYPE FROM seat, member 
                                 WHERE seat.s_number = member.s_number and member.m_phone = %s) 
@@ -391,8 +423,8 @@ def Op5_ExtendSeatDate () :
             SeatData[0]["S_END"] = AfterExtendTime.strftime('%Y-%m-%d')
             
             UpDateSeatCommand = ''' UPDATE SEAT
-                                        SET S_END = %s
-                                        WHERE S_NUMBER = 
+                                    SET S_END = %s
+                                    WHERE S_NUMBER = 
                                                     (SELECT S_NUMBER
 	                                                FROM   MEMBER
 		                                            WHERE  M_PHONE = %s)'''
@@ -406,7 +438,31 @@ def Op5_ExtendSeatDate () :
 # 메뉴 6번. 퇴실 등록
 
 def Op6_ExitRegister () :
-    pass
+    conn, cursor = ConnectMySQL()
+    
+    print('''====================================================
+퇴실 등록절차를 시작합니다.
+휴대폰 번호를 입력해주세요.
+====================================================''')
+
+    IsThereAnyNum, PhoneNumber = SearchPhoneNumber()
+        
+    if IsThereAnyNum == False:
+        print('''회원 등록이 되어있지 않습니다.
+퇴실하려면 먼저 회원등록을 하셔야합니다.\n''')
+        
+    else :
+        with conn.cursor(pymysql.cursors.DictCursor) as cur:
+            
+            CheckEnterFinished = CheckEnterRegister(PhoneNumber)
+            
+            if CheckEnterFinished == False : print("\n퇴실을 하시려면 먼저 입실을 해주셔야 합니다.")
+
+            else :
+                EnterRegisterCommand = "UPDATE DOOR SET D_LEAVE = SYSDATE() WHERE D_NUMBER = (SELECT S_NUMBER FROM MEMBER WHERE M_PHONE = %s)"
+                cur.execute(EnterRegisterCommand,PhoneNumber)
+                conn.commit()
+                print("\n퇴실 등록이 완료되었습니다.\n")
 
 
 
