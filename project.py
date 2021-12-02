@@ -3,7 +3,7 @@ import datetime
 import sys
 import time
 import schedule
-
+import threading
 
 
 #변수 선언
@@ -60,17 +60,89 @@ def CheckEnterRegister(PhoneNumber) :
                                                     WHERE M_PHONE = %s)'''
         cur.execute(SelectDoorDataCommand,PhoneNumber)
         DoorData = cur.fetchall()
-        if DoorData[0]["D_ENTER"] == None or DoorData[0]["D_ENTER"] < DoorData[0]["D_LEAVE"] : return False
+        if DoorData[0]["D_ENTER"] == None :
+            return False
+        elif DoorData[0]["D_LEAVE"] != None and DoorData[0]["D_ENTER"] < DoorData[0]["D_LEAVE"] :
+            return False
         else : return True
 
-# 스케쥴링 회원 삭제 후 좌석 비우기 함수
-
-# 스케쥴링 스터디룸 비우기 함수
 
 
 
+# 스케쥴링 회원 삭제 후 좌석 비우기 함수, 하루에 1회 시행
 
+def DeleteMem_ResetSeat () :
+    conn, cursor = ConnectMySQL()
+    cursor.execute('USE StudyMember;')
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
+        
+        SearchEndSeatCommand ='''SELECT * FROM MEMBER,SEAT 
+                                WHERE MEMBER.S_NUMBER = SEAT.S_NUMBER AND S_END < CURDATE()'''
+        
+        Search2WeekExcessCommand = '''SELECT * FROM MEMBER,DOOR 
+                                    WHERE MEMBER.S_NUMBER = DOOR.D_NUMBER AND 
+                                    DATE(D_LEAVE) < SUBDATE(CURDATE(), INTERVAL 14 DAY)'''
+                                            
+        cur.execute(SearchEndSeatCommand)
+        EndSeatList = cur.fetchall() 
+        cur.execute(Search2WeekExcessCommand)
+        ExceDoorList = cur.fetchall()
+        
+        DeleteMemCommand = "DELETE FROM MEMBER WHERE M_PHONE = %s"
+        
+        ResetSeatCommand = '''UPDATE SEAT
+                            SET S_START = NULL, S_END = NULL , S_PAYMENT = NULL
+                            WHERE S_NUMBER = 
+                                            (SELECT S_NUMBER
+	                                        FROM   MEMBER
+		                                    WHERE  M_PHONE = %s)''' 
+        ResetDoorCommand ='''UPDATE DOOR
+                            SET D_ENTER = NULL, D_LEAVE = NULL
+                            WHERE D_NUMBER = 
+                                            (SELECT S_NUMBER
+	                                        FROM   MEMBER
+		                                    WHERE  M_PHONE = %s)'''
+        
+         # 종료 기간이 지난 회원 정보 삭제
+        
+        for i in EndSeatList:
+            cur.execute(DeleteMemCommand,i["M_PHONE"])
+            cur.execute(ResetSeatCommand,i["M_PHONE"])
+            cur.execute(ResetDoorCommand,i["M_PHONE"])
+            conn.commit()
+        
+        for i in ExceDoorList:
+            cur.execute(DeleteMemCommand,i["M_PHONE"])
+            cur.execute(ResetSeatCommand,i["M_PHONE"])
+            cur.execute(ResetDoorCommand,i["M_PHONE"])
+            conn.commit()
+        
+        
+            
+            
+# 스케쥴링 스터디룸 비우기 함수, 매분 01초 마다 실행
 
+def ResetRoom () :
+    
+    conn, cursor = ConnectMySQL()
+    cursor.execute('USE StudyMember;')
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
+        SearchRoomCommand = "SELECT ROOM.R_NUMBER, M_PHONE FROM ROOM, MEMBER WHERE ROOM.RES_END < SYSDATE()"    
+        cur.execute(SearchRoomCommand)
+        RoomExcessList = cur.fetchall()
+
+        ResetMemCommand = "UPDATE MEMBER SET R_NUMBER = %s WHERE M_PHONE = %s"
+        ResetRoomCommand = "UPDATE ROOM SET R_START = NULL, R_END = NULL, R_TIME = NULL WHERE R_NUMBER = %s;"
+        
+        for i in RoomExcessList :
+            cur.execute(ResetMemCommand,(i["R_NUMBER"],i["M_PHONE"]))
+            cur.execute(ResetRoomCommand,i["M_PHONE"])
+            conn.commit()
+        
+# 함수 DeleteMem_ResetSeat, ResetRoom 스케줄링 
+
+ScheduleJob_1 = schedule.every().day.at("00:00:01").do(DeleteMem_ResetSeat)
+ScheduleJob_2 = schedule.every().minute.at(":01").do(ResetRoom)
 
 # 메뉴 1번. 회원가입 및 신규 좌석 대여 등록
 
@@ -269,6 +341,7 @@ def Op3_StudyRoomRegister() :
                         CheckEnterFinished = CheckEnterRegister(PhoneNumber)
                         if CheckEnterFinished == False :
                             print("\n 해당 회원은 스터디룸 등록전 먼저 입실을 완료해주셔야 합니다. 메뉴로 돌아갑니다.\n")
+                            time.sleep(3)
                             return
                         else : break
                 RegisterRoomCommand = "UPDATE MEMBER SET MEMBER.R_NUMBER = %s WHERE M_PHONE = %s"
