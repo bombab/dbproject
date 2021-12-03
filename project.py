@@ -464,6 +464,7 @@ def Op4_ChangeSeatNum() :
             CheckEnterFinished = CheckEnterRegister(PhoneNumber)
             if CheckEnterFinished == False :
                 print("\n 좌석변경전 먼저 입실등록을 해주셔야 합니다. 메뉴로 돌아갑니다. \n")
+                time.sleep(3)
                 return
             
             SearchSeatCommand = '''SELECT * FROM seat WHERE RENT_Start IS NULL and S_TYPE = 
@@ -477,6 +478,7 @@ def Op4_ChangeSeatNum() :
             if IsThereAnySeat == False :
                 
                 print("\n죄송합니다. 현재 잔여 좌석이 없어 좌석변경이 불가능합니다.\n")
+                time.sleep(2)
             else :
                 print('''\n==========================
 좌석 변경을 시작합니다.
@@ -532,7 +534,7 @@ def Op4_ChangeSeatNum() :
                 print('''============================
 좌석 변경이 완료되었습니다.
 ============================\n''')
-                time.sleep(2)
+                time.sleep(3)
 
 
 
