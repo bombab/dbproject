@@ -3,7 +3,6 @@ import datetime
 import sys
 import time
 import schedule
-from apscheduler.schedulers.background import BackgroundScheduler
 import threading
 
 
