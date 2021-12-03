@@ -369,7 +369,7 @@ def Op3_StudyRoomRegister() :
                 while(True):
                     print("휴대폰 번호 뒤 8자리를 입력해주세요.")
                     IsThereAnyNum, PhoneNumber = SearchPhoneNumber()
-                    if IsThereAnyNum == False: # 휴대폰 번호가 등록되어 있지 않을 경우
+                    if IsThereAnyNum == False: # 오류 1. 휴대폰 번호가 등록되어 있지 않을 경우
                         print('''해당 휴대폰 번호는 회원 명단에 없습니다.
 다시 입력하고 싶으시면 아무키를 누르시고, 메뉴로 돌아가 회원가입을 원하시면 1번을 눌러주세요.\n''')      
                         SelectButton = input("입력: ")
@@ -377,13 +377,22 @@ def Op3_StudyRoomRegister() :
                             conn.commit()
                             return
                         else : continue
-                    else : # 먼저 입실을 하지 않았을 경우
-                        CheckEnterFinished = CheckEnterRegister(PhoneNumber)
-                        if CheckEnterFinished == False :
-                            print("\n 해당 회원은 스터디룸 등록전 먼저 입실을 완료해주셔야 합니다. 메뉴로 돌아갑니다.\n")
-                            time.sleep(3)
-                            return
-                        else : break
+                    CheckEnterFinished = CheckEnterRegister(PhoneNumber)
+                        
+                    if CheckEnterFinished == False : # 오류 2. 회원이 먼저 입실을 하지 않았을 경우
+                        print("\n 해당 회원은 스터디룸 등록전 먼저 입실을 완료해주셔야 합니다. 메뉴로 돌아갑니다.\n")
+                        time.sleep(3)
+                        return
+                    
+                    SearchRoomInUse = "SELECT R_NUMBER FROM MEMBER WHERE M_PHONE = %s"
+                    cur.execute(SearchRoomInUse,PhoneNumber)
+                    CheckAlreadyUse = cur.fetchall()
+                    
+                    if CheckAlreadyUse[0]["R_NUMBER"] != None : # 오류 3. 회원이 이미 다른 스터디룸을 이용중 일 경우
+                        print("\n현재 해당 회원은 이미 다른 스터디룸을 이용중입니다. 메뉴로 돌아갑니다.\n")
+                        time.sleep(3)
+                        return
+                    else : break
                 RegisterRoomCommand = "UPDATE MEMBER SET MEMBER.R_NUMBER = %s WHERE M_PHONE = %s"
                 cur.execute(RegisterRoomCommand,(SelectRoomNum,PhoneNumber))
                 conn.commit()
