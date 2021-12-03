@@ -127,16 +127,19 @@ def ResetRoom () :
     conn, cursor = ConnectMySQL()
     cursor.execute('USE StudyMember;')
     with conn.cursor(pymysql.cursors.DictCursor) as cur:
-        SearchRoomCommand = "SELECT ROOM.R_NUMBER, M_PHONE FROM ROOM, MEMBER WHERE ROOM.SER_END < SYSDATE()"    
+        SearchRoomCommand = '''SELECT ROOM.R_NUMBER, M_PHONE 
+                            FROM ROOM, MEMBER 
+                            WHERE MEMBER.R_NUMBER = ROOM.R_NUMBER 
+                            AND ROOM.SER_END < SYSDATE()'''   
         cur.execute(SearchRoomCommand)
         RoomExcessList = cur.fetchall()
 
         ResetMemCommand = "UPDATE MEMBER SET R_NUMBER = %s WHERE M_PHONE = %s"
-        ResetRoomCommand = "UPDATE ROOM SET SER_START = NULL, SER_END = NULL, SER_TIME = NULL WHERE R_NUMBER = %s;"
+        ResetRoomCommand = "UPDATE ROOM SET SER_START = NULL, SER_END = NULL, SER_TIME = NULL WHERE R_NUMBER = %s" 
         
         for i in RoomExcessList :
             cur.execute(ResetMemCommand,(None,i["M_PHONE"]))
-            cur.execute(ResetRoomCommand,i["M_PHONE"])
+            cur.execute(ResetRoomCommand,i["R_NUMBER"])
             conn.commit()
 
 
@@ -384,7 +387,6 @@ def Op3_StudyRoomRegister() :
                 RegisterRoomCommand = "UPDATE MEMBER SET MEMBER.R_NUMBER = %s WHERE M_PHONE = %s"
                 cur.execute(RegisterRoomCommand,(SelectRoomNum,PhoneNumber))
                 conn.commit()
-            
               
                 # 이용 시간 입력, 이용 시간은 시간 단위이며, 이용자 모두 남은 잔여시간이 이용시간 보다 같거나 커야 한다.
             while(True) :
