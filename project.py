@@ -3,6 +3,7 @@ import datetime
 import sys
 import time
 import schedule
+from apscheduler.schedulers.background import BackgroundScheduler
 import threading
 
 
@@ -138,8 +139,25 @@ def ResetRoom () :
             cur.execute(ResetMemCommand,(None,i["M_PHONE"]))
             cur.execute(ResetRoomCommand,i["M_PHONE"])
             conn.commit()
+
+
+
+# 스케쥴링 스터디룸 잔여시간 초기화 함수, 매주 월요일 00시 00분 01초마다 실행
+  
+def ResetSTime () :
+    
+    conn, cursor = ConnectMySQL()
+    cursor.execute('USE StudyMember;')
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
         
+        ResetResTimeCommand = "UPDATE MEMBER SET SER_REMAINING = 20"
+        
+        cur.execute(ResetResTimeCommand)
+        conn.commit()
+
+
 # 함수 DeleteMem_ResetSeat, ResetRoom 스케줄링 
+
 
 
 
@@ -147,6 +165,7 @@ def Thread_function ():
 
     schedule.every().day.at("00:00:01").do(DeleteMem_ResetSeat)
     schedule.every().minute.at(":01").do(ResetRoom)
+    schedule.every().monday.at("00:00:01").do(ResetSTime)
     
     while(True) :
         schedule.run_pending()
@@ -200,7 +219,7 @@ def Op1_MemberRegister() :
 ====================================================\n''')
         while(True) :
             for i in RemainedSeat:
-                print(str(i["S_NUMBER"])+"번 좌석, 방 유형 : " + i["S_TYPE"] + " 이용요금 : " + str(i["RENT_CHARGE"]))
+                print(str(i["S_NUMBER"])+"번 좌석, 방 유형 : " + i["S_TYPE"] + " 이용요금 : " + str(i["S_CHARGE"]))
             print("\n")
             SelectSeatNum = int(input("신규 등록할 좌석 번호 : "))
             if SelectSeatNum in [i["S_NUMBER"] for i in RemainedSeat] : break
