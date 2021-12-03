@@ -135,7 +135,7 @@ def ResetRoom () :
         ResetRoomCommand = "UPDATE ROOM SET SER_START = NULL, SER_END = NULL, SER_TIME = NULL WHERE R_NUMBER = %s;"
         
         for i in RoomExcessList :
-            cur.execute(ResetMemCommand,(i["R_NUMBER"],i["M_PHONE"]))
+            cur.execute(ResetMemCommand,(None,i["M_PHONE"]))
             cur.execute(ResetRoomCommand,i["M_PHONE"])
             conn.commit()
         
