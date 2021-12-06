@@ -228,7 +228,7 @@ def Op1_MemberRegister() :
             print("\n[입력오류]: 잘못 누르셨습니다. 메뉴에 있는 좌석번호만을 선택해주세요.\n")
         
         print('''\n====================================================
-선택한 좌석에 대한 결제일과 시작일을 년월일 기준으로 8글자를 입력해주세요.
+선택한 좌석에 대한 시작일을 년월일 기준으로 8글자를 입력해주세요.
 ====================================================\n''')
         while (True) :
              # 결제일 등록, 결제일의 경우 자동으로 현재시각에 맞춤
@@ -238,7 +238,7 @@ def Op1_MemberRegister() :
                 StartDate = input("시작일 8글자 ex) 20100101 :")
                 if len(StartDate) == 8: break
                 print("[입력오류]: 시작일 등록을 위해서는 년월일 8글자를 입력해주셔야 합니다.")
-            while(True) :
+            
                 if int(PaymentDate) <= int(StartDate) : break
                 print("[입력오류]: 시작일이 결제일보다 이를수는 없습니다. 다시 입력해주세요.\n")
             try:
@@ -364,9 +364,11 @@ def Op3_StudyRoomRegister() :
                     else : continue
                 else : break
                 
-            # 사람 명 수 만큼 휴대폰 번호 입력 
+            # 사람 명 수 만큼 휴대폰 번호 입력
+            PersonList = [] 
             for i in range(PeopleNum) : 
                 while(True):
+                    RegisterRoomCommand = "UPDATE MEMBER SET MEMBER.R_NUMBER = %s WHERE M_PHONE = %s"
                     print("휴대폰 번호 뒤 8자리를 입력해주세요.")
                     IsThereAnyNum, PhoneNumber = SearchPhoneNumber()
                     if IsThereAnyNum == False: # 오류 1. 휴대폰 번호가 등록되어 있지 않을 경우
@@ -374,6 +376,8 @@ def Op3_StudyRoomRegister() :
 다시 입력하고 싶으시면 아무키를 누르시고, 메뉴로 돌아가 회원가입을 원하시면 1번을 눌러주세요.\n''')      
                         SelectButton = input("입력: ")
                         if SelectButton == '1' :
+                            for i in PersonList :
+                                cur.execute(RegisterRoomCommand,(None,i))
                             conn.commit()
                             return
                         else : continue
@@ -381,6 +385,8 @@ def Op3_StudyRoomRegister() :
                         
                     if CheckEnterFinished == False : # 오류 2. 회원이 먼저 입실을 하지 않았을 경우
                         print("\n 해당 회원은 스터디룸 등록전 먼저 입실을 완료해주셔야 합니다. 메뉴로 돌아갑니다.\n")
+                        for i in PersonList :
+                            cur.execute(RegisterRoomCommand,(None,i))
                         time.sleep(3)
                         return
                     
@@ -390,12 +396,14 @@ def Op3_StudyRoomRegister() :
                     
                     if CheckAlreadyUse[0]["R_NUMBER"] != None : # 오류 3. 회원이 이미 다른 스터디룸을 이용중 일 경우
                         print("\n현재 해당 회원은 이미 다른 스터디룸을 이용중입니다. 메뉴로 돌아갑니다.\n")
+                        for i in PersonList :
+                            cur.execute(RegisterRoomCommand,(None,i))
                         time.sleep(3)
                         return
                     else : break
-                RegisterRoomCommand = "UPDATE MEMBER SET MEMBER.R_NUMBER = %s WHERE M_PHONE = %s"
                 cur.execute(RegisterRoomCommand,(SelectRoomNum,PhoneNumber))
                 conn.commit()
+                PersonList.append(PhoneNumber)
               
                 # 이용 시간 입력, 이용 시간은 시간 단위이며, 이용자 모두 남은 잔여시간이 이용시간 보다 같거나 커야 한다.
             while(True) :
